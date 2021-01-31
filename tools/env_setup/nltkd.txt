@@ -1,0 +1,7 @@
+c
+d
+/usr/share/nltk_data
+m
+d all
+q
+

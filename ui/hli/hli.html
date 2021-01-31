@@ -1,0 +1,299 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.6.2.min.js"></script>
+	<!--jQuery, linked from a CDN-->
+	<script type="text/javascript" src="http://use.typekit.com/oya4cmx.js"></script>
+	<!-- <script type="text/javascript">try{Typekit.load();}catch(e){}</script>> -->
+<title>Agent-UI</title>
+<link href="/ui/styles.css" rel="stylesheet" type="text/css" media="screen">
+</head>
+<body>
+
+<script type="text/javascript">
+$(document).ready(function(){
+	var hliList = "/api/v1/hli/list";
+	var hliLock = "/api/v1/hli/lock";
+	var hliUnlock = "/api/v1/hli/unlock";
+	var hliAnswer = "/api/v1/hli/answer";
+	var hliDelete = "/api/v1/hli/delete";
+	var myClientID = "imdatChat";
+	var originalUserQuery = "";
+	var myJobStatus = 0;
+	var myUUID = "";
+	var theJobID = "";
+	var gTimeIntID = 0;
+
+	var clientIdentificationData = { hliClientID: myClientID , agentNameOrID: "1"};
+	var openRequests = null
+
+
+
+	var lockItem = function () {
+	}
+
+
+	var unlockItem = function() {
+	}
+
+
+	var sendNewResponse = function() {
+		selectedRequest = getSelectionValue('requests');
+		if (selectedRequest != null) {
+			var responseT = $('#answer').val();
+			var answerT = 'E';
+			var answerT = getSelectionValue('aType');
+			var answerC = getSelectionValue('category');
+			var response = {hliClientID: myClientID, agentNameOrID: "1", requestID: selectedRequest, response: {responseText: responseT, qType: answerT, category: answerC, responseWasSelected: false, responseID: -1}};
+			$.ajax({
+				type: "POST",
+				url: hliAnswer,
+				data: JSON.stringify(response),
+				contentType: "application/json; charset=utf-8",
+				dataType: "json",
+				async: true,
+				complete: getList});
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	var sendSelectedResponse = function() {
+		var selectedRequest = getSelectionValue('requests');
+		if (selectedRequest != null) {
+			var selectedResponse = getSelectionValue('calcResponses');
+			var responses = getResponsesOfRequest(selectedRequest);
+			var aResponse = responses[selectedResponse];
+			if (aResponse != null) {
+				aResponse['responseWasSelected'] = true;
+				aResponse['agentNameOrID'] = "1";
+				aResponse['responseID'] = selectedResponse;
+				var response = {hliClientID: myClientID, requestID: selectedRequest, response:aResponse, agentNameOrID: "1"};
+				$.ajax({
+					type: "POST",
+					url: hliAnswer,
+					data: JSON.stringify(response),
+					contentType: "application/json; charset=utf-8",
+					dataType: "json",
+					async: true,
+					complete: getList});
+				return true;
+			}
+		}
+		return false;
+	}
+
+
+	var getList = function () {
+		$('#calcResponses').html('');
+		$('#answer').val('');
+		$('#qoptions').hide();
+		$('#respondNew').prop('disabled', true);
+		$('#respondSelected').prop('disabled', true);
+		$('#deleteRequest').prop('disabled', true);
+		$('#qDetails').val('');
+		$.ajax({
+			type: "POST",
+			url: hliList,
+			data: JSON.stringify(clientIdentificationData),
+			contentType: 'application/json; charset=utf-8', 
+			dataType: 'json',
+			async: true,
+			statusCode: {
+				200: function(data) {
+					requests = data.requests;
+					openRequests = requests;
+					text = '';
+					for (var requestID in requests) {
+						requestData = requests[requestID];
+						text = text + '\n<option value="' + requestID + '">' + requestData["untouchedOriginalRequest"] + " (" + requestData["untouchedEnrichedOriginalRequest"] + ")</option>";
+					}
+					$('#requests').html(text);
+					$('#calcResponses').html('');
+					$('#answer').val('');
+					$('#qoptions').hide();
+					$('#respondNew').prop('disabled', true);
+					$('#respondSelected').prop('disabled', true);
+					$('#answer').prop('disabled', true);
+				}
+			}
+		});
+	}
+
+	function getSelectionValue(elementID) {
+		var elt = document.getElementById(elementID);
+		if (elt.selectedIndex == -1) 
+			return null;
+
+		return elt.options[elt.selectedIndex].value;
+	
+	}
+
+	function getResponsesOfRequest(requestID) {
+		if (requestID != null && requestID.length > 0) {
+			var theRequest = openRequests[requestID];
+			if (theRequest != null) {
+				var responses = theRequest['calculatedResponses'];
+				if (responses != null) {
+					return responses;
+				}
+			}
+		}
+		return null;
+	}
+
+	var selectRequest = function () {
+		$('#calcResponses').html('');
+		$('#answer').val('');
+		$('#qoptions').hide();
+		$('#answer').prop('disabled', true);
+		$('#deleteRequest').prop('disabled', true);
+		$('#qDetails').val('');
+		var selectedRequest = getSelectionValue('requests');
+		if (selectedRequest != null) {
+			var theRequest = openRequests[selectedRequest];
+			var respText = theRequest['untouchedOriginalRequest'] + ' (' + theRequest['untouchedEnrichedOriginalRequest'] + ')';
+			$('#qDetails').val(respText);
+					
+			var responses = getResponsesOfRequest(selectedRequest);
+			if (responses != null) {
+				var text = '';
+				var tempArr = [];
+				for (var responseID in responses) {
+					var response = responses[responseID];
+					var confL = response['confidenceLevel'] * 100;
+					tempArr.push([confL, responseID]);
+				}
+				tempArr.sort(function(a,b) { return a[0] - b[0]});
+				tempArr.reverse();
+				for (var i=0;i<tempArr.length;i++) {
+					var entry = tempArr[i];
+					var responseID = entry[1];
+					var response = responses[responseID];
+					var confL = response['confidenceLevel'] * 100;
+					var cLevel = confL.toFixed(1);
+					var cLStr = "[" + cLevel + "%] ";
+					text = text + '\n<option value="' + responseID + '">' + cLStr + response["responseText"] + "</option>";
+				}
+				$('#calcResponses').html(text);
+				$('#answer').val('');
+				$('#respondNew').prop('disabled', true);
+				$('#respondSelected').prop('disabled', true);
+				$('#deleteRequest').prop('disabled', false);
+			} else {
+				$('#answer').val('');
+			}
+		}
+		if (selectedRequest != null) {
+			$('#answer').prop('disabled', false);
+			$('#qoptions').show();
+			$('#deleteRequest').prop('disabled', false);
+		}
+	}
+
+
+	var selectCalcResponse = function () {
+		$('#answer').val('');
+		var selectedResponse = getSelectionValue('calcResponses');
+		if (selectedResponse != null) {
+			selectedRequest = getSelectionValue('requests');
+			var responses = getResponsesOfRequest(selectedRequest);
+			var response = responses[selectedResponse];
+			if (response != null) {
+				$('#answer').val(response['responseText']);
+				$('#qoptions').hide();
+				$('#respondNew').prop('disabled', true);
+				$('#respondSelected').prop('disabled', false);
+			}
+		} else {
+			$('#qoptions').hide();
+			$('#respondNew').prop('disabled', true);
+			$('#respondSelected').prop('disabled', true);
+		}
+	}
+
+	var deleteSelectedRequest = function () {
+		var selectedRequest = getSelectionValue('requests');
+		if (selectedRequest != null) {
+			var payload = {hliClientID: myClientID, agentNameOrID: "1", requestID: selectedRequest};
+			$.ajax({
+				type: "DELETE",
+				url: hliDelete,
+				data: JSON.stringify(payload),
+				contentType: "application/json; charset=utf-8",
+				dataType: "json",
+				async: true,
+				complete: getList});
+			return true;
+		}
+		return false;
+	}
+
+	$('#requests').click(selectRequest);
+	$('#calcResponses').click(selectCalcResponse);
+
+	$('#refreshList').click(getList);
+
+	$('#respondSelected').click(sendSelectedResponse);
+	$('#respondNew').click(sendNewResponse);
+	$('#deleteRequest').click(deleteSelectedRequest);
+
+	$('#answer').keyup(function(event) {
+		$('#qoptions').show();
+		var text = this.value;
+		$('#respondSelected').prop('disabled', true);
+		if (text.length > 16) {
+			$('#respondNew').prop('disabled', false);
+			$('#qoptions').show();
+		} else {
+			$('#respondNew').prop('disabled', true);
+			$('#qoptions').hide();
+		}
+	});
+
+	getList();
+
+});
+</script>
+
+	<header>
+        <h1 align='center'>Agent-UI</h1>
+	</header>
+	
+		<h4>Hier finden Sie alle Anfragen, die Bender nicht selbst beantworten konnte, daher werden Sie gefragt, eine Antwort auszuwählen oder eine neue Antwort zu schreiben. Diese Antwort wird antrainiert und später wiederverwendet. Bitte wählen Sie zuerst eine Frage aus, dann geht es los...</h3>
+	<div id="formular">
+		<h5>USER-FRAGEN</h5>
+		<select id="requests" name="requests" size="10" ></select>
+		<h6>Ausgewählte Frage</h6>
+		<textarea id="qDetails" name="qDetails" disabled="true" rows="3">
+		</textarea>
+		<div class="submitButtons">
+			<input type="submit" id="refreshList" name="refreshList" value="Liste aktualisieren">
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			<input type="submit" id="deleteRequest" name="deleteRequest" value="Ausgewählte Frage löschen">
+		</div>
+		<h5>MÖGLICHE ANTWORTEN</h5>
+		<select id="calcResponses" name="calcResponses" size="10" ></select>
+		<h5>IHRE ANTWORT</h5>
+		<textarea id="answer" name="answer" rows="4"></textarea><br />
+		<div id="qoptions">
+		Antwort-Typ: <select id="aType" name="aTyoe">
+			<option value="E" selected="selected">Finale Antwort (KEINE Gegenfrage)</option>
+			<option value="M">Zwischenantwort (Gegenfrage)</option>
+		</select>&nbsp;&nbsp;&nbsp;&nbsp;
+		Kategorie: <select id="category" name="category">
+			<option value="1" selected="selected">Allgemein</option>
+		</select>
+		</div>
+		<div class="submitButtons">
+			<input type="submit" id="respondNew" name="respondNew" value="Als neue Antwort senden">
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			<input type="submit" id="respondSelected" name="respondSelected" value="Ausgewählte Antwort senden">
+		</div>
+	</div>
+	<span id="debug" name="debug">
+	</span>
+</body>
+</html>

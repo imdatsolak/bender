@@ -1,0 +1,226 @@
+@charset "UTF-8";
+/* latin */
+@font-face {
+  font-family: 'Strait';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Strait'), local('Strait-Regular'), url(https://fonts.gstatic.com/s/strait/v5/1A0-znpGnBhalRuE5ZLu9OvvDin1pK8aKteLpeZ5c0A.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215;
+}
+
+body, html {
+	margin: 0;
+	padding: 0;
+	font-family: 'Strait', sans;
+	font-weight: 300;
+}
+
+
+header {
+	border-bottom: 1px solid #dcdcdc;
+	padding: 45px 47px 10px 47px;
+}
+
+header img {
+	height: 100px;
+	width: auto;
+}
+
+#formular {
+	/* padding: 110px 0 120px 0; */
+	padding: 20px 0 80px 0;
+	text-align: center;
+}
+
+.submitButtons {
+	padding-top: 18px;
+}
+
+input {
+	font-size: 1.5em;
+	font-family: 'Strait', sans;
+	font-weight: 100;
+	background-color: #ffcc66;
+	border: none;
+	padding: 8px 8px;
+	font-color: black;
+	width: 30%;
+}
+
+#frage, #userQuery {
+	width: 50%;
+}
+
+input:disabled {
+	font-color: #a0a0a0;
+	background-color: #dddddd;
+}
+
+select, textarea {
+	font-size: 1.25em;
+	font-family: 'Strait', sans;
+	font-weight: 100;
+	background-color: #f0f0ed;
+	border: none;
+	padding: 8px 8px;
+	width: 80%;
+}
+
+#aType, #category {
+	font-size: 1em;
+	background-color: #e0e0e0;
+	border: 1px solid;
+	padding: 4px 4px;
+	width: 20%;
+}
+
+#search {
+	background-color: #006666;
+	border: none;
+	font-size: 1em;
+	color: #ffffff;
+	text-transform: uppercase;
+	font-size: 1.5em;
+	font-weight: 300;
+	padding: 20px 70px;
+	margin-top: 30px;
+	width: 30%;
+}
+
+#qoptions {
+	padding-top: 20px;
+	padding-bottom: 8px;
+	font-size: 1.25em;
+}
+
+h1 {
+	color: #663333;
+	font-size: 4.75em;
+	margin: 0;
+	font-weight: 900;
+}
+
+h4 {
+	margin: 20px 100px 20px 100px;
+	padding-left: 100px;
+	padding-right: 100px;
+	color: #663333;
+	font-size: 2em;
+	line-heigth: 1.4em;
+	font-weight: 100;
+}
+
+h5 {
+	margin: 40px 0 5px 0;
+	color: #663333;
+	font-size: 2.5em;
+	line-heigth: 1.4em;
+	font-weight: 120;
+}
+
+
+h6 {
+	margin: 5px 0 5px 0;
+	color: #663333;
+	font-size: 1.5em;
+	line-heigth: 1.4em;
+	font-weight: 105;
+}
+
+#qDetails {
+	font-size: 1.25em;
+	font-family: 'Strait', sans;
+	font-weight: 100;
+	border: none;
+	padding: 8px 8px;
+	width: 80%;
+	background-color: #f0f0f0;
+}
+
+
+#auswertung {
+	background-image: url(imgs/bg.gif);
+	background-position: top center;
+	background-repeat: repeat-y;
+}
+
+.spalte {
+	width: 50%;
+	float: left;
+	color: #505050;
+	font-weight: 900;
+}
+
+.spalte.links p {
+	margin: 70px 120px 0 120px;
+}
+
+.spalte.rechts {
+	font-family: Consolas, "Andale Mono", "Lucida Console", "Lucida Sans Typewriter", Monaco, "Courier New", "monospace";
+	font-weight: 200;
+}
+
+.spalte.rechts p {
+	margin: 70px 80px;
+	line-height: 1.0em;
+}
+
+.code_rot {
+	color: #ff3000;
+}
+
+.code_gruen {
+	color: #2ba500;
+}
+
+.absender.rechts {
+	text-align: right;
+}
+
+.wrapper {
+	background-image: url(imgs/bubble_left.gif);
+	background-repeat: no-repeat;
+	background-position: left bottom;
+	padding: 0 23px;
+	margin: 15px 57px 0 57px;
+}
+
+.wrapper.antwort {
+	background-image: url(imgs/bubble_right.gif);
+	background-position: right bottom;
+}
+
+
+.sprechblase {
+	background-color: #ffcc66;
+	padding: 20px 40px;
+}
+
+.sprechblase.antwort {
+	background-color: #ffffff;
+}
+
+.sprechblase p {
+	font-weight: 300;
+	line-height: 1.6em;
+	margin: 0 !important;
+	padding: 10px 0;
+}
+
+.confidence_level {
+	color: #003769;
+	font-weight: 900;
+}
+
+
+
+.clear_div {
+	clear: both;
+}
+
+pre { word-wrap: inherit; width:100%; }
+.string { color: green; }
+.number { color: darkorange; }
+.boolean { color: blue; }
+.null { color: magenta; }
+.key { color: red; }

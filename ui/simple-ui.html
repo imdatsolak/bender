@@ -1,0 +1,270 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.6.2.min.js"></script>
+	<!--jQuery, linked from a CDN-->
+	<script type="text/javascript" src="http://use.typekit.com/oya4cmx.js"></script>
+	<!-- <script type="text/javascript">try{Typekit.load();}catch(e){}</script>> -->
+<title>DEV-UI</title>
+<link href="/ui/styles.css" rel="stylesheet" type="text/css" media="screen">
+</head>
+<body>
+
+<script type="text/javascript">
+$(document).ready(function(){
+	var benderConfigurationAPI = "/api/v1/configuration";
+	var benderSessionAPI = "/api/v1/session";
+	var benderQueryAPI = "/api/v1/query";
+	var benderJobAPI = "/api/v1/job";
+	var benderResponseAPI = "/api/v1/response";
+	var myClientID = "imdatChat";
+	var originalUserQuery = "";
+	var myJobStatus = 0;
+	var myUUID = "";
+	var theJobID = "";
+	var gTimeIntID = 0;
+	var jobStatusTries = 0;
+
+	var clientIdentificationData = { clientID: myClientID };
+	$.ajax({
+		type: "POST",
+		url: benderSessionAPI,
+		data: JSON.stringify(clientIdentificationData),
+		 contentType: 'application/json; charset=utf-8', 
+		dataType: 'json',
+		async: false,
+		success:function(data) {
+			myUUID = data.UUID;
+		}
+	});
+
+
+	$.ajax({
+		type: "POST",
+		url: benderConfigurationAPI,
+		data: JSON.stringify(clientIdentificationData),
+		contentType: 'application/json; charset=utf-8', 
+		dataType: 'json',
+		async: false,
+		success:function(data) {
+			debugText = syntaxHighlight(data);
+			$('#debug').html("<pre>" + debugText + "</pre>");
+		}
+	});
+
+	/*
+	$('#userQuery').focus(function(){
+	  var full = $("#responseText").has("h3").length ? true : false;
+	  if(full == false){
+		 $('#responseText').empty();
+		 $('#responseCL').empty()
+	  }
+	});
+	*/
+	function wordWrap(str, maxWidth) {
+		var newLineStr = "\n"; done = false; res = '';
+		do {                    
+			found = false;
+			// Inserts new line at first whitespace of the line
+			for (i = maxWidth - 1; i >= 0; i--) {
+				if (testWhite(str.charAt(i))) {
+					res = res + [str.slice(0, i), newLineStr].join('');
+					str = str.slice(i + 1);
+					found = true;
+					break;
+				}
+			}
+			// Inserts new line at maxWidth position, the word is too long to wrap
+			if (!found) {
+				res += [str.slice(0, maxWidth), newLineStr].join('');
+				str = str.slice(maxWidth);
+			}
+
+			if (str.length < maxWidth)
+				done = true;
+		} while (!done);
+
+		return res + str;
+	}
+
+	function testWhite(x) {
+	    var white = new RegExp(/^\s$/);
+		return white.test(x.charAt(0));
+	};
+
+	function syntaxHighlight(json) {
+		if (typeof json != 'string') {
+			 json = JSON.stringify(json, undefined, 2);
+		}
+		json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+		return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+			var cls = 'number';
+			if (/^"/.test(match)) {
+				if (/:$/.test(match)) {
+					cls = 'key';
+				} else {
+					cls = 'string';
+				}
+			} else if (/true|false/.test(match)) {
+				cls = 'boolean';
+			} else if (/null/.test(match)) {
+				cls = 'null';
+			}
+			
+			if (cls == 'string' && match.length >80) {
+				match = wordWrap(match, 80)	
+			}
+		
+			return '<span class="' + cls + '">' + match + '</span>';
+		});
+	}
+
+	var checkJobStatus = function() {
+		var requestArr = { clientID: myClientID, UUID: myUUID, jobID: myJobID};
+		clearInterval(gTimeIntID);
+		gTimeIntID = 0;
+		$.ajax({ type: "POST", url: benderJobAPI, data: JSON.stringify(requestArr), contentType: 'application/json; charset=utf-8', dataType: 'json', async: true, statusCode: {
+				200: function(data) {
+					jobStatusTries = 0;
+					$.ajax({ type: "POST", url: benderResponseAPI, data: JSON.stringify(requestArr), contentType: 'application/json; charset=utf-8', dataType: 'json', async: true, 
+						statusCode : {
+							200: function(data) {
+									$('#userQuery').val('')
+									responseText = data.response.responseText;
+									confidenceLevel = data.response.confidenceLevel * 100;
+									machineLogicName = data.response.logicEngineID;
+									dateTime = data.dateTime;
+									$('#responseText').html(responseText );
+									cLevel = confidenceLevel.toFixed(0);
+									$('#responseCL').html(cLevel + "%");
+									debugText = syntaxHighlight(data);
+									$('#debug').html("<pre>" + debugText + "</pre>");
+
+								},
+							204: function(dat) {
+								$('#responseText').html('<span style="color: #fda112;">Konnte leider keine Antwort finden. Bitte formulieren Sie Ihre Frage um.</span>' );
+							},
+							404: function(data) {
+								$('#responseText').html('<span style="text-color: red;">Die Anfrage ist leider verschwunden... Bitte wiederholen Sie ihre Frage.</span>' );
+							}
+						}
+					});
+				},
+				202: function(data) {
+					gTimeIntID = setInterval(checkJobStatus, 1000);
+					jobStatusTries = 0;
+				},
+				404: function(data) {
+					$('#responseText').html('<span style="color: red;">FEHLER: Die Anfrage wurde gel&ouml;scht oder der Server neu gestartet. Bitte schicken Sie Ihre Anfrage nochmals...</span>' );
+				},
+				307: function(data) {
+					$('#responseText').html('<span style="text-color: #e89d32;">Weitergeleitet an Agenten... Warte auf Antwort.</span>' );
+					gTimeIntID = setInterval(checkJobStatus, 1000);
+					jobStatusTries = 0;
+				}
+			},
+			complete: function(jqX, textStatus) {
+				if (jqX.status != 404 & jqX.status != 200 & jqX.status != 202 & jqX.status != 204 & jqX.status != 307) {
+					if (jobStatusTries > 500) {
+						$('#responseText').html('<span style="color: red;">FEHLER: ' + jqX.status + '  beim Verbindungsaufbau zum bender-Server. Es wurde insgesamt 5x versucht, eine Verbindung aufzubauen. Bitte pr&uuml;fen Sie Ihre Internet-Verbindung.</span>' );
+						jobStatusTries = 0;
+					} else if (jqX.status == 0) {
+						$('#responseText').html('<span style="color: #fda112;">INFO: Verbindung zu bender-Server fehlgeschlagen. Werde es weiter probieren...</span>');
+						gTimeIntID = setInterval(checkJobStatus, 3000);
+						jobStatusTries = jobStatusTries + 1;
+					} else {
+						$('#responseText').html('<span style="color: red;">FEHLER: Verbindung zu bender-Server fehlgeschlagen mit Verbindungsfehler ' + jqX.status + '. Bitte administration benachrichtigen.</span>' );
+						jobStatusTries = 0;
+					}
+				}
+			}
+		});
+	}
+
+	var sendRequest = function() {
+		var userQuery = $('#userQuery').val();
+		originalUserQuery = userQuery;
+		jobStatusTries = 0;
+
+		if (gTimeIntID != 0) {
+			clearInterval(gTimeIntID);
+			gTimeIntID = 0;
+		}
+		if(userQuery == ''){
+			$('#responseText').html("<h2 class='loading'>...</h2>");
+         } else {
+            $('#responseText').html("Antwort wird berechnet...");
+			$('#responseCL').empty();
+			$('#originalUserQuery').empty();
+			$('#originalUserQuery').html(originalUserQuery);
+			var requestBody = { clientID : myClientID, UUID : myUUID, queryInputType: 'text', requestedResponseType: 'text', queryText: userQuery }
+			$.ajax({
+				type: "POST",
+				url: benderQueryAPI,
+				data: JSON.stringify(requestBody),
+				contentType: 'application/json; charset=utf-8', 
+				dataType: 'json',
+				async: true,
+				success:function(data) { 
+					myJobID = data.jobID;
+					gTimeIntID = setInterval(checkJobStatus, 1000);
+				},
+				complete: function(jqX, textStatus) {
+					if (textStatus != 'success') {
+						$('#responseText').html('Could not send request. Please change your request and send again');
+						$('#debug').html('');
+					}
+				}});
+          }
+        return false;
+   }
+
+   $('#search').click(sendRequest);
+
+   $('#userQuery').keyup(function(event){
+       if(event.keyCode == 13){
+           sendRequest();
+       }
+   });
+
+});
+</script>
+<header>
+    <h1 align='center'>Test-UI</h2>
+</header>
+	<div id="formular">
+		<h5>Bitte stellen Sie eine Frage.</h5>
+		<input type="text" id="userQuery" name="frage" placeholder="Frage eingeben ..."><br />
+		<input type="submit" id="search" name="search" value="Fragen">
+	</div>
+	
+	<div id="auswertung">
+		<div class="spalte links">
+		  	<p class="absender links">Ihre Frage</p>
+		  		<div class="wrapper frage">
+		  			<div class="sprechblase frage" id="originalUserQuery">
+						NONE
+					</div>
+		  		</div>
+		  	<p class="absender rechts">Antwort</p>
+		 		<div class="wrapper antwort">
+		  		<div class="sprechblase antwort">
+					<p id="responseText"></p>
+					<p class="confidence_level">Confidence Level: <span id="responseCL">N/A</span></p>
+				</div>
+			</div>
+			<div>
+				<br />
+				<br />
+			</div>
+		</div>
+		<div class="spalte rechts">
+			<p>DEBUG<br />
+			<span id="debug" class="spalte rechts"> </span>
+			</p>
+		</div>
+		<div class="clear_div"></div>
+	</div>
+</body>
+</html>
